@@ -30,7 +30,7 @@ public class QNameCache {
      * Cache of {@link Map}instances indexed by namespace which contain caches
      * of {@link QName}for each name
      */
-    protected Map<Namespace, Map<String, QName>> namespaceCache = Collections.synchronizedMap(new WeakHashMap<Namespace, Map<String, QName>>());
+    private static ThreadLocal<Map<Namespace, Map<String, QName>>> threadLocal = ThreadLocal.withInitial(() -> new WeakHashMap<>());
 
     /**
      * The document factory associated with new QNames instances in this cache
@@ -54,7 +54,7 @@ public class QNameCache {
         List<QName> answer = new ArrayList<QName>();
         answer.addAll(noNamespaceCache.values());
 
-        for (Map<String, QName> map : namespaceCache.values()) {
+        for (Map<String, QName> map : threadLocal.get().values()) {
             answer.addAll(map.values());
         }
 
@@ -191,12 +191,12 @@ public class QNameCache {
         Map<String, QName> answer = null;
 
         if (namespace != null) {
-            answer = namespaceCache.get(namespace);
+            answer = threadLocal.get().get(namespace);
         }
 
         if (answer == null) {
             answer = createMap();
-            namespaceCache.put(namespace, answer);
+            threadLocal.get().put(namespace, answer);
         }
 
         return answer;
@@ -256,6 +256,11 @@ public class QNameCache {
             String qualifiedName) {
         return new QName(name, namespace, qualifiedName);
     }
+
+    public static void clear(){
+        threadLocal.remove();
+    }
+
 }
 
 

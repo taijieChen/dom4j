@@ -20,6 +20,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.DocumentFactory;
 import org.dom4j.ElementHandler;
 
+import org.dom4j.tree.QNameCache;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
@@ -467,6 +468,8 @@ public class SAXReader {
             } else {
                 throw new DocumentException(e.getMessage(), e);
             }
+        }finally {
+            QNameCache.clear();
         }
     }
 
