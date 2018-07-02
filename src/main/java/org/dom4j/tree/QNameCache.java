@@ -24,13 +24,13 @@ import java.util.*;
  */
 public class QNameCache {
     /** Cache of {@link QName}instances with no namespace */
-    protected Map<String, QName> noNamespaceCache = Collections.synchronizedMap(new WeakHashMap<String, QName>());
+    private static ThreadLocal<Map<String, QName>> noCacheThreadLocal =  ThreadLocal.withInitial(() -> new WeakHashMap<>());
 
     /**
      * Cache of {@link Map}instances indexed by namespace which contain caches
      * of {@link QName}for each name
      */
-    private static ThreadLocal<Map<Namespace, Map<String, QName>>> threadLocal = ThreadLocal.withInitial(() -> new WeakHashMap<>());
+    private static ThreadLocal<Map<Namespace, Map<String, QName>>> cacheThreadLocal = ThreadLocal.withInitial(() -> new WeakHashMap<>());
 
     /**
      * The document factory associated with new QNames instances in this cache
@@ -52,9 +52,9 @@ public class QNameCache {
      */
     public List<QName> getQNames() {
         List<QName> answer = new ArrayList<QName>();
-        answer.addAll(noNamespaceCache.values());
+        answer.addAll(noCacheThreadLocal.get().values());
 
-        for (Map<String, QName> map : threadLocal.get().values()) {
+        for (Map<String, QName> map : cacheThreadLocal.get().values()) {
             answer.addAll(map.values());
         }
 
@@ -73,7 +73,7 @@ public class QNameCache {
         QName answer = null;
 
         if (name != null) {
-            answer = noNamespaceCache.get(name);
+            answer = noCacheThreadLocal.get().get(name);
         } else {
             name = "";
         }
@@ -81,7 +81,7 @@ public class QNameCache {
         if (answer == null) {
             answer = createQName(name);
             answer.setDocumentFactory(documentFactory);
-            noNamespaceCache.put(name, answer);
+            noCacheThreadLocal.get().put(name, answer);
         }
 
         return answer;
@@ -185,18 +185,18 @@ public class QNameCache {
      */
     protected Map<String, QName> getNamespaceCache(Namespace namespace) {
         if (namespace == Namespace.NO_NAMESPACE) {
-            return noNamespaceCache;
+            return noCacheThreadLocal.get();
         }
 
         Map<String, QName> answer = null;
 
         if (namespace != null) {
-            answer = threadLocal.get().get(namespace);
+            answer = cacheThreadLocal.get().get(namespace);
         }
 
         if (answer == null) {
             answer = createMap();
-            threadLocal.get().put(namespace, answer);
+            cacheThreadLocal.get().put(namespace, answer);
         }
 
         return answer;
@@ -258,7 +258,8 @@ public class QNameCache {
     }
 
     public static void clear(){
-        threadLocal.remove();
+        cacheThreadLocal.remove();
+        noCacheThreadLocal.remove();
     }
 
 }
